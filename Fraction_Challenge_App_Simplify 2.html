@@ -1,0 +1,180 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Fraction Challenge App</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;background:#f0f4f8;margin:0;padding:20px;text-align:center}
+    h1{margin-top:0}
+    .nav{margin-bottom:20px}
+    .nav button{margin:0 6px;padding:8px 14px;border:none;border-radius:4px;background:#1976d2;color:#fff;font-size:15px;cursor:pointer}
+    section{display:none;padding:20px;background:#fff;border-radius:8px;box-shadow:0 0 8px rgba(0,0,0,.1);max-width:500px;margin:0 auto}
+    section.active{display:block}
+    canvas{margin:20px auto !important}
+    input[type=text]{padding:6px;font-size:16px;width:120px;text-align:center;border:1px solid #ccc;border-radius:4px}
+    .btn{margin-top:12px;padding:6px 14px;border:none;border-radius:4px;background:#4caf50;color:#fff;font-size:15px;cursor:pointer}
+    .feedback{margin-top:10px;font-weight:bold}
+    .simplify-box {margin-top:10px;display:none;}
+  </style>
+</head>
+<body>
+  <h1>🧩 Fraction Challenge App</h1>
+  <div class="nav">
+    <button onclick="showSection('pieSec')">Pie Chart</button>
+    <button onclick="showSection('lineSec')">Number Line</button>
+  </div>
+
+  <!-- Pie Chart Section -->
+  <section id="pieSec" class="active">
+    <h2>Write the fraction shown by the pie</h2>
+    <canvas id="pieCanvas" width="250" height="250"></canvas>
+    <div>
+      <input id="pieAnswer" type="text" placeholder="e.g. 5/6">
+      <button class="btn" onclick="checkPie()">Check</button>
+      <button class="btn" style="background:#1976d2" onclick="newPie()">New Pie</button>
+    </div>
+    <div class="feedback" id="pieFeedback"></div>
+    <div class="simplify-box" id="pieSimplifyBox">
+      <p>This fraction can be simplified. What is the simplest form?</p>
+      <input id="pieSimplify" type="text" placeholder="e.g. 2/3">
+      <button class="btn" onclick="checkPieSimplified()">Check</button>
+      <div class="feedback" id="pieSimplifyFeedback"></div>
+    </div>
+  </section>
+
+  <!-- Number Line Section -->
+  <section id="lineSec">
+    <h2>What fraction does the point represent?</h2>
+    <canvas id="lineCanvas" width="350" height="120"></canvas>
+    <div>
+      <input id="lineAnswer" type="text" placeholder="e.g. 3/5">
+      <button class="btn" onclick="checkLine()">Check</button>
+      <button class="btn" style="background:#1976d2" onclick="newLine()">New Number Line</button>
+    </div>
+    <div class="feedback" id="lineFeedback"></div>
+    <div class="simplify-box" id="lineSimplifyBox">
+      <p>This fraction can be simplified. What is the simplest form?</p>
+      <input id="lineSimplify" type="text" placeholder="e.g. 2/3">
+      <button class="btn" onclick="checkLineSimplified()">Check</button>
+      <div class="feedback" id="lineSimplifyFeedback"></div>
+    </div>
+  </section>
+
+<script>
+function showSection(id){
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+function gcd(a,b){while(b){[a,b]=[b,a%b];}return a;}
+
+// ----- PIE CHALLENGE -----
+let pieChart, pieNum=3, pieDen=4;
+function newPie(){
+  pieDen = randInt(3,8);
+  pieNum = randInt(1,pieDen-1);
+  const ctx=document.getElementById('pieCanvas').getContext('2d');
+  const data=new Array(pieDen).fill(1);
+  const colors=data.map((_,i)=>i<pieNum?'#4caf50':'#f44336');
+  if(pieChart) pieChart.destroy();
+  pieChart=new Chart(ctx,{type:'pie',data:{labels:data.map((_,i)=>'Part '+(i+1)),datasets:[{data,backgroundColor:colors,borderColor:'#fff',borderWidth:2}]},options:{responsive:false,plugins:{legend:{display:false}}}});
+  document.getElementById('pieAnswer').value='';
+  document.getElementById('pieFeedback').textContent='';
+  document.getElementById('pieSimplifyBox').style.display='none';
+}
+function checkPie(){
+  const user=document.getElementById('pieAnswer').value.trim();
+  if(user===`${pieNum}/${pieDen}`){
+    const g=gcd(pieNum,pieDen);
+    if(g>1){
+      document.getElementById('pieFeedback').textContent='✅ Correct — but can you simplify it?';
+      document.getElementById('pieFeedback').style.color='#ff9800';
+      document.getElementById('pieSimplifyBox').style.display='block';
+    } else {
+      document.getElementById('pieFeedback').textContent='✅ Correct!';
+      document.getElementById('pieFeedback').style.color='#4caf50';
+    }
+  } else {
+    document.getElementById('pieFeedback').textContent=`❌ Incorrect. It is ${pieNum}/${pieDen}`;
+    document.getElementById('pieFeedback').style.color='#f44336';
+  }
+}
+function checkPieSimplified(){
+  const g=gcd(pieNum,pieDen);
+  const simp = `${pieNum/g}/${pieDen/g}`;
+  const user=document.getElementById('pieSimplify').value.trim();
+  const fb=document.getElementById('pieSimplifyFeedback');
+  if(user===simp){
+    fb.textContent='✅ Simplified correctly!';
+    fb.style.color='#4caf50';
+  } else {
+    fb.textContent=`❌ Not quite. It simplifies to ${simp}`;
+    fb.style.color='#f44336';
+  }
+}
+
+// ----- LINE CHALLENGE -----
+let lineNum=2,lineDen=5;
+function drawNumberLine(){
+  const canvas=document.getElementById('lineCanvas');
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const padding=40, lineY=60, startX=padding, endX=canvas.width-padding;
+  const segment=(endX-startX)/lineDen;
+  ctx.strokeStyle='#000';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(startX,lineY);ctx.lineTo(endX,lineY);ctx.stroke();
+  for(let i=0;i<=lineDen;i++){
+    const x=startX+i*segment;
+    ctx.beginPath();ctx.moveTo(x,lineY-6);ctx.lineTo(x,lineY+6);ctx.stroke();
+    ctx.font='12px Arial';ctx.textAlign='center';ctx.fillText(i===0?'0':i===lineDen?'1':'',x,lineY+20);
+  }
+  const pointX=startX+lineNum*segment;
+  ctx.fillStyle='#d32f2f';ctx.beginPath();ctx.arc(pointX,lineY,6,0,Math.PI*2);ctx.fill();
+}
+function newLine(){
+  lineDen = randInt(3,8);
+  lineNum = randInt(1,lineDen-1);
+  drawNumberLine();
+  document.getElementById('lineAnswer').value='';
+  document.getElementById('lineFeedback').textContent='';
+  document.getElementById('lineSimplifyBox').style.display='none';
+}
+function checkLine(){
+  const user=document.getElementById('lineAnswer').value.trim();
+  if(user===`${lineNum}/${lineDen}`){
+    const g=gcd(lineNum,lineDen);
+    if(g>1){
+      document.getElementById('lineFeedback').textContent='✅ Correct — but can you simplify it?';
+      document.getElementById('lineFeedback').style.color='#ff9800';
+      document.getElementById('lineSimplifyBox').style.display='block';
+    } else {
+      document.getElementById('lineFeedback').textContent='✅ Correct!';
+      document.getElementById('lineFeedback').style.color='#4caf50';
+    }
+  } else {
+    document.getElementById('lineFeedback').textContent=`❌ Incorrect. It is ${lineNum}/${lineDen}`;
+    document.getElementById('lineFeedback').style.color='#f44336';
+  }
+}
+function checkLineSimplified(){
+  const g=gcd(lineNum,lineDen);
+  const simp = `${lineNum/g}/${lineDen/g}`;
+  const user=document.getElementById('lineSimplify').value.trim();
+  const fb=document.getElementById('lineSimplifyFeedback');
+  if(user===simp){
+    fb.textContent='✅ Simplified correctly!';
+    fb.style.color='#4caf50';
+  } else {
+    fb.textContent=`❌ Not quite. It simplifies to ${simp}`;
+    fb.style.color='#f44336';
+  }
+}
+
+// INIT
+newPie();
+newLine();
+</script>
+</body>
+</html>
